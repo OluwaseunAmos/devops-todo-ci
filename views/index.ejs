@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EC2 Todo App</title>
+
+  <style>
+    /* =========================
+       RESET & GLOBAL
+    ========================== */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --background: #f3f4f6;
+      --white: #ffffff;
+    }
+
+    body {
+      font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, #e0e7ff 0%, transparent 35%),
+        radial-gradient(circle at bottom right, #dbeafe 0%, transparent 35%),
+        var(--background);
+
+      color: var(--text);
+
+      padding: 40px 20px;
+
+      animation: pageFadeIn 0.6s ease;
+    }
+
+    /* =========================
+       MAIN CONTAINER
+    ========================== */
+
+    .container {
+      width: 100%;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    .app-card {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 24px;
+      padding: 32px;
+
+      box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.04);
+
+      backdrop-filter: blur(10px);
+
+      animation: cardSlideUp 0.7s ease;
+    }
+
+    /* =========================
+       HEADER
+    ========================== */
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header-icon {
+      width: 60px;
+      height: 60px;
+
+      margin: 0 auto 16px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background: linear-gradient(135deg,
+          var(--primary),
+          #8b5cf6);
+
+      color: white;
+
+      border-radius: 18px;
+
+      font-size: 28px;
+
+      box-shadow:
+        0 10px 20px rgba(99, 102, 241, 0.25);
+
+      animation: iconFloat 3s ease-in-out infinite;
+    }
+
+    .header h1 {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    /* =========================
+       ADD TODO FORM
+    ========================== */
+
+    .add-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      flex: 1;
+    }
+
+    .task-input {
+      width: 100%;
+      height: 50px;
+
+      border: 2px solid var(--border);
+      border-radius: 12px;
+
+      padding: 0 16px;
+
+      font-size: 15px;
+
+      outline: none;
+
+      transition:
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        transform 0.25s ease;
+    }
+
+    .task-input:focus {
+      border-color: var(--primary);
+
+      box-shadow:
+        0 0 0 4px rgba(99, 102, 241, 0.1);
+
+      transform: translateY(-1px);
+    }
+
+    .task-input::placeholder {
+      color: #9ca3af;
+    }
+
+    /* =========================
+       BUTTONS
+    ========================== */
+
+    button {
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+    }
+
+    .add-btn {
+      height: 50px;
+
+      padding: 0 22px;
+
+      border-radius: 12px;
+
+      background: linear-gradient(135deg,
+          var(--primary),
+          var(--primary-dark));
+
+      color: white;
+
+      font-weight: 600;
+      font-size: 15px;
+
+      box-shadow:
+        0 8px 18px rgba(79, 70, 229, 0.2);
+    }
+
+    .add-btn:hover {
+      transform: translateY(-2px);
+
+      box-shadow:
+        0 12px 24px rgba(79, 70, 229, 0.3);
+    }
+
+    .add-btn:active {
+      transform: translateY(0);
+    }
+
+    /* =========================
+       TODO HEADER
+    ========================== */
+
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      margin-bottom: 12px;
+
+      padding: 0 4px;
+    }
+
+    .list-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .task-count {
+      font-size: 13px;
+      color: var(--muted);
+
+      background: #f3f4f6;
+
+      padding: 5px 10px;
+
+      border-radius: 20px;
+    }
+
+    /* =========================
+       TODO LIST
+    ========================== */
+
+    .todo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+
+      padding: 15px 16px;
+
+      background: #fafafa;
+
+      border: 1px solid var(--border);
+
+      border-radius: 14px;
+
+      transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease,
+        background 0.25s ease;
+
+      animation: todoAppear 0.4s ease both;
+    }
+
+    .todo-item:hover {
+      transform: translateY(-2px);
+
+      background: white;
+
+      border-color: #d1d5db;
+
+      box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    /* stagger animation */
+
+    .todo-item:nth-child(1) {
+      animation-delay: 0.05s;
+    }
+
+    .todo-item:nth-child(2) {
+      animation-delay: 0.1s;
+    }
+
+    .todo-item:nth-child(3) {
+      animation-delay: 0.15s;
+    }
+
+    .todo-item:nth-child(4) {
+      animation-delay: 0.2s;
+    }
+
+    .todo-item:nth-child(5) {
+      animation-delay: 0.25s;
+    }
+
+    /* =========================
+       TODO TEXT
+    ========================== */
+
+    .task-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      min-width: 0;
+    }
+
+    .task-dot {
+      width: 10px;
+      height: 10px;
+
+      flex-shrink: 0;
+
+      border-radius: 50%;
+
+      background: var(--primary);
+
+      box-shadow:
+        0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .task-text {
+      font-size: 15px;
+      font-weight: 500;
+
+      word-break: break-word;
+
+      transition:
+        color 0.25s ease,
+        opacity 0.25s ease;
+    }
+
+    .completed {
+      text-decoration: line-through;
+
+      color: #9ca3af;
+
+      opacity: 0.7;
+    }
+
+    .completed+.task-dot {
+      background: var(--success);
+    }
+
+    /* =========================
+       ACTION BUTTONS
+    ========================== */
+
+    .actions {
+      display: flex;
+      gap: 7px;
+
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      padding: 7px 11px;
+
+      border-radius: 8px;
+
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .done-btn {
+      background: #ecfdf5;
+      color: #059669;
+    }
+
+    .done-btn:hover {
+      background: #d1fae5;
+
+      transform: translateY(-1px);
+    }
+
+    .undo-btn {
+      background: #eef2ff;
+      color: #4f46e5;
+    }
+
+    .undo-btn:hover {
+      background: #e0e7ff;
+
+      transform: translateY(-1px);
+    }
+
+    .delete-btn {
+      background: #fef2f2;
+      color: var(--danger);
+    }
+
+    .delete-btn:hover {
+      background: #fee2e2;
+
+      transform: translateY(-1px);
+    }
+
+    .action-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* =========================
+       EMPTY STATE
+    ========================== */
+
+    .empty-state {
+      text-align: center;
+
+      padding: 40px 20px;
+
+      color: var(--muted);
+    }
+
+    .empty-icon {
+      font-size: 40px;
+
+      margin-bottom: 12px;
+
+      animation: iconFloat 3s ease-in-out infinite;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    /* =========================
+       FOOTER
+    ========================== */
+
+    .footer {
+      text-align: center;
+
+      margin-top: 25px;
+
+      font-size: 12px;
+
+      color: #9ca3af;
+    }
+
+    .footer span {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* =========================
+       ANIMATIONS
+    ========================== */
+
+    @keyframes pageFadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes cardSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(25px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes todoAppear {
+      from {
+        opacity: 0;
+        transform: translateX(-15px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes iconFloat {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+
+    /* =========================
+       RESPONSIVE
+    ========================== */
+
+    @media (max-width: 600px) {
+      body {
+        padding: 20px 12px;
+      }
+
+      .app-card {
+        padding: 22px 16px;
+
+        border-radius: 18px;
+      }
+
+      .header h1 {
+        font-size: 25px;
+      }
+
+      .add-form {
+        flex-direction: column;
+      }
+
+      .add-btn {
+        width: 100%;
+      }
+
+      .todo-item {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .task-content {
+        width: 100%;
+      }
+
+      .actions {
+        width: 100%;
+      }
+
+      .action-btn {
+        flex: 1;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="container">
+
+    <div class="app-card">
+
+      <!-- Header -->
+      <header class="header">
+
+        <div class="header-icon">
+          ✓
+        </div>
+
+        <h1>My Todo List</h1>
+
+        <p>
+          Stay organized and get things done.
+        </p>
+
+      </header>
+
+
+      <!-- Add Todo -->
+      <form action="/add" method="POST" class="add-form">
+
+        <div class="input-wrapper">
+          <input class="task-input" type="text" name="task" placeholder="What needs to be done?" autocomplete="off"
+            required>
+        </div>
+
+        <button type="submit" class="add-btn">
+          + Add Task
+        </button>
+
+      </form>
+
+
+      <!-- Todo List Header -->
+      <div class="list-header">
+
+        <h2>Your Tasks</h2>
+
+        <span class="task-count">
+          <%= todos.length %> task<%= todos.length !==1 ? 's' : '' %>
+        </span>
+
+      </div>
+
+
+      <!-- Todo List -->
+      <div class="todo-list">
+
+        <% if (todos.length===0) { %>
+
+          <div class="empty-state">
+
+            <div class="empty-icon">
+              📝
+            </div>
+
+            <p>
+              No tasks yet. Add your first task above!
+            </p>
+
+          </div>
+
+          <% } %>
+
+
+            <% todos.forEach(todo=> { %>
+
+              <div class="todo-item">
+
+                <div class="task-content">
+
+                  <span class="task-dot"></span>
+
+                  <span class="task-text <%= todo.completed ? 'completed' : '' %>">
+                    <%= todo.task %>
+                  </span>
+
+                </div>
+
+
+                <div class="actions">
+
+                  <!-- Update -->
+                  <form action="/update/<%= todo._id %>" method="POST">
+
+                    <button type="submit" class="action-btn <%= todo.completed ? 'undo-btn' : 'done-btn' %>">
+                      <%= todo.completed ? '↩ Undo' : '✓ Done' %>
+                    </button>
+
+                  </form>
+
+
+                  <!-- Delete -->
+                  <form action="/delete/<%= todo._id %>" method="POST">
+
+                    <button type="submit" class="action-btn delete-btn">
+                      🗑 Delete
+                    </button>
+
+                  </form>
+
+                </div>
+
+              </div>
+
+              <% }) %>
+
+      </div>
+
+    </div>
+
+
+    <!-- Footer -->
+    <div class="footer">
+      Powered by <span>Node.js</span> · <span>MongoDB</span> · <span>AWS EC2</span>
+    </div>
+
+  </main>
+
+</body>
+
+</html>
+```
