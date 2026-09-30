@@ -1,0 +1,39 @@
+name: Deploy DevOps To-Do
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+
+          script: |
+            # Navigate to the project directory
+            cd ~/devops-todo
+
+            # Reset local changes and pull the latest code
+            git fetch origin
+            git reset --hard origin/main
+            git pull origin main
+
+            # Install production dependencies
+            npm ci --omit=dev
+
+            # Restart the application with PM2
+            pm2 restart todo-app
+
+            # Save the PM2 process list
+            pm2 save
